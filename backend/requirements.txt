@@ -1,14 +1,14 @@
 flask
 flask-cors
-python-dotenv
 requests
-werkzeug
-pypdf
+python-dotenv
+sentence-transformers
+faiss-cpu
+pdfplumber
+waitress
 langchain
 
 torch
 transformers==4.41.2
-sentence-transformers==2.6.1
-faiss-cpu==1.7.4
 numpy<2.0.0
 google-generativeai

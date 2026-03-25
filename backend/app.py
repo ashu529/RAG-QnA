@@ -3,28 +3,30 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 from rag_pipeline import generate_answer
 from vector_store import build_index
 
-app = Flask(__name__)
-CORS(app, resources={r"/*": {
-    "origins": "*",
-    "methods": ["GET", "POST", "OPTIONS"],
-    "allow_headers": ["Content-Type", "Authorization"]
-}})
+# Get the absolute path to the frontend/dist folder
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_STARS_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend", "dist")
+
+app = Flask(__name__, static_folder=FRONTEND_STARS_DIR, static_url_path="/")
+CORS(app)
 
 # Absolute path to docs folder
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "data", "docs")
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-@app.route("/")
-def home():
-    return {"status": "RAG API running"}
+# ---------------- SERVE FRONTEND ----------------
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, "index.html")
 
 # ---------------- UPLOAD DOCUMENT ----------------
 @app.route("/upload", methods=["POST"])
