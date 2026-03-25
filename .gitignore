@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Data & Indices (Crucial for RAG)
+backend/data/*.faiss
+backend/data/*.pkl
+backend/data/docs/*
+!backend/data/docs/.gitkeep
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+.eslintcache
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+backend_log.txt
+crash_error.txt
+crash_trace.txt
+out.txt
+vite_out.log
+vite_err.log
