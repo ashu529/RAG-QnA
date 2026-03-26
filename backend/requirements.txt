@@ -6,9 +6,3 @@ sentence-transformers
 faiss-cpu
 pdfplumber
 waitress
-langchain
-
-torch
-transformers==4.41.2
-numpy<2.0.0
-google-generativeai
