@@ -13,8 +13,20 @@ CHUNKS_PATH = os.path.join(DATA_DIR, "chunks.pkl")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# ---------------- MODEL ----------------
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+# ---------------- MODEL (Environment-aware & Lazy-loaded) ----------------
+# Standard model: "all-MiniLM-L6-v2" (~90MB)
+# Ultra-light model for 512MB RAM: "paraphrase-MiniLM-L3-v2" (~45MB)
+DEFAULT_MODEL = os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
+
+_embedding_model = None
+
+def get_embedding_model():
+    """Lazy-loads the embedding model to save memory on server startup."""
+    global _embedding_model
+    if _embedding_model is None:
+        print(f"Loading embedding model: {DEFAULT_MODEL}...")
+        _embedding_model = SentenceTransformer(DEFAULT_MODEL)
+    return _embedding_model
 
 # ---------------- BUILD INDEX ----------------
 def build_index():
@@ -28,7 +40,8 @@ def build_index():
         raise ValueError("No chunks found. Add documents to data/docs first.")
 
     print("Encoding chunks (this may take a while)...")
-    embeddings = embedding_model.encode(chunks)
+    model = get_embedding_model()
+    embeddings = model.encode(chunks)
     print("Encoding complete. Preparing FAISS index...")
     embeddings = np.array(embeddings).astype("float32")
 
@@ -56,7 +69,8 @@ def search(query, top_k=3, distance_threshold=0.8):
     with open(CHUNKS_PATH, "rb") as f:
         chunks = pickle.load(f)
 
-    query_embedding = embedding_model.encode([query])
+    model = get_embedding_model()
+    query_embedding = model.encode([query])
     query_embedding = np.array(query_embedding).astype("float32")
 
     distances, indices = index.search(query_embedding, top_k)

@@ -4,7 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import './App.css';
 
-const API_BASE = 'https://rag-qna.onrender.com'; // Production backend on Render
+// Detect if we're running locally or in production
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000' 
+  : ''; // Use relative path for unified hosting or update this to your specific Render/Railway URL if split
 
 function App() {
   const [file, setFile] = useState(null);
