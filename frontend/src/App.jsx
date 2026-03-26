@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import './App.css';
 
-const API_BASE = ''; // Unified hosting
+const API_BASE = 'https://rag-qna.onrender.com'; // Production backend on Render
 
 function App() {
   const [file, setFile] = useState(null);
