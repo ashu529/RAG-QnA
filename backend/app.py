@@ -3,30 +3,25 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 from rag_pipeline import generate_answer
 from vector_store import build_index
 
-# Get the absolute path to the frontend/dist folder
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_STARS_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend", "dist")
 
-app = Flask(__name__, static_folder=FRONTEND_STARS_DIR, static_url_path="/")
-CORS(app)
+app = Flask(__name__)
+CORS(app)  # Allow all origins for Netlify frontend
 
 # Absolute path to docs folder
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "data", "docs")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ---------------- SERVE FRONTEND ----------------
-@app.route("/", defaults={"path": ""})
-@app.route("/<path:path>")
-def serve(path):
-    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-        return send_from_directory(app.static_folder, path)
-    return send_from_directory(app.static_folder, "index.html")
+# ---------------- HEALTH CHECK ----------------
+@app.route("/")
+def home():
+    return jsonify({"status": "RAG API is running"})
 
 # ---------------- UPLOAD DOCUMENT ----------------
 @app.route("/upload", methods=["POST"])
