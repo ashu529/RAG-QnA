@@ -5,9 +5,10 @@ import axios from 'axios';
 import './App.css';
 
 // Detect if we're running locally or in production
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:5000' 
-  : ''; // Use relative path for unified hosting or update this to your specific Render/Railway URL if split
+const API_BASE = import.meta.env.VITE_API_URL 
+  || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000' 
+    : ''); 
 
 function App() {
   const [file, setFile] = useState(null);
