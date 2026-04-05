@@ -2,8 +2,13 @@ import os
 import faiss
 import pickle
 import numpy as np
-from sentence_transformers import SentenceTransformer
+from dotenv import load_dotenv
 from document_processor import load_documents, chunk_documents
+
+# Use a lightweight local embedding model instead of Gemini to avoid API keys
+from sentence_transformers import SentenceTransformer
+
+load_dotenv()
 
 # ---------------- PATHS ----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -13,20 +18,16 @@ CHUNKS_PATH = os.path.join(DATA_DIR, "chunks.pkl")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# ---------------- MODEL (Environment-aware & Lazy-loaded) ----------------
-# Standard model: "all-MiniLM-L6-v2" (~90MB)
-# Ultra-light model for 512MB RAM: "paraphrase-MiniLM-L3-v2" (~45MB)
-DEFAULT_MODEL = os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
+# ---------------- MODEL ----------------
+# We use a very small, fast model to prevent memory issues.
+print("Loading local embedding model...")
+embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
-_embedding_model = None
-
-def get_embedding_model():
-    """Lazy-loads the embedding model to save memory on server startup."""
-    global _embedding_model
-    if _embedding_model is None:
-        print(f"Loading embedding model: {DEFAULT_MODEL}...")
-        _embedding_model = SentenceTransformer(DEFAULT_MODEL)
-    return _embedding_model
+def get_embeddings(texts):
+    """Fetches embeddings entirely locally."""
+    print(f"Generating embeddings for {len(texts)} chunks...")
+    embeddings = embedder.encode(texts, convert_to_numpy=True)
+    return embeddings
 
 # ---------------- BUILD INDEX ----------------
 def build_index():
@@ -39,13 +40,13 @@ def build_index():
     if not chunks:
         raise ValueError("No chunks found. Add documents to data/docs first.")
 
-    print("Encoding chunks (this may take a while)...")
-    model = get_embedding_model()
-    embeddings = model.encode(chunks)
+    print("Encoding chunks via Gemini (cloud)...")
+    embeddings = get_embeddings(chunks)
     print("Encoding complete. Preparing FAISS index...")
+    
     embeddings = np.array(embeddings).astype("float32")
-
     dimension = embeddings.shape[1]
+    
     index = faiss.IndexFlatL2(dimension)
     index.add(embeddings)
 
@@ -60,7 +61,7 @@ def build_index():
 
 
 # ---------------- SEARCH ----------------
-def search(query, top_k=3, distance_threshold=0.8):
+def search(query, top_k=4): 
     if not os.path.exists(INDEX_PATH):
         return []
 
@@ -69,22 +70,23 @@ def search(query, top_k=3, distance_threshold=0.8):
     with open(CHUNKS_PATH, "rb") as f:
         chunks = pickle.load(f)
 
-    model = get_embedding_model()
-    query_embedding = model.encode([query])
-    query_embedding = np.array(query_embedding).astype("float32")
+    # Embed query locally
+    try:
+        query_embedding = embedder.encode([query], convert_to_numpy=True).astype("float32")
+    except Exception as e:
+        print(f"Query embedding error: {e}")
+        return []
 
     distances, indices = index.search(query_embedding, top_k)
 
     results = []
+    # Relaxed search logic: just return top_k to let the LLM filter
     for dist, idx in zip(distances[0], indices[0]):
-        # LOWER distance = MORE similar
-        if idx < len(chunks) and dist < distance_threshold:
+        if idx < len(chunks):
             results.append(chunks[idx])
 
     return results
 
-
-# ---------------- TEST ----------------
 if __name__ == "__main__":
     build_index()
     results = search("What is normalization in DBMS?")

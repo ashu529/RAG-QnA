@@ -6,3 +6,6 @@ sentence-transformers
 faiss-cpu
 pypdf
 waitress
+groq
+firebase-admin
+google-generativeai

@@ -29,11 +29,35 @@ def load_documents():
     return documents
 
 
-def chunk_documents(documents, chunk_size=300):
+def chunk_documents(documents, chunk_size=1500, overlap=300):
+    """
+    Chunks text with a sliding window (overlap) for better context retention.
+    Tries to break on spaces to avoid cutting words in half.
+    """
     chunks = []
 
     for doc in documents:
-        for i in range(0, len(doc), chunk_size):
-            chunks.append(doc[i:i + chunk_size])
+        start = 0
+        doc_len = len(doc)
+
+        while start < doc_len:
+            end = start + chunk_size
+
+            # If we're not at the end of the document, try to break on a space
+            if end < doc_len:
+                last_space = doc.rfind(' ', start, end)
+                if last_space != -1 and last_space > start:
+                    end = last_space
+
+            chunk = doc[start:end].strip()
+            if len(chunk) > 10: # Only add meaningful chunks
+                chunks.append(chunk)
+
+            # Move start forward, but keep an overlap
+            start = end - overlap
+            
+            # Prevent infinite loop if no space was found and end == start
+            if start <= 0 or end <= start:
+                break
 
     return chunks
