@@ -5,8 +5,8 @@ import numpy as np
 from dotenv import load_dotenv
 from document_processor import load_documents, chunk_documents
 
-# Use a lightweight local embedding model instead of Gemini to avoid API keys
-from sentence_transformers import SentenceTransformer
+# Disable tokenizer parallelism to save RAM on constrained environments
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 load_dotenv()
 
@@ -18,15 +18,25 @@ CHUNKS_PATH = os.path.join(DATA_DIR, "chunks.pkl")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# ---------------- MODEL ----------------
-# We use a very small, fast model to prevent memory issues.
-print("Loading local embedding model...")
-embedder = SentenceTransformer('all-MiniLM-L6-v2')
+# ---------------- MODEL (lazy-loaded to save startup RAM) ----------------
+# The model is only loaded into memory when first needed (first upload or search).
+# This prevents OOM on Render's 512MB free tier during cold start.
+_embedder = None
+
+def get_embedder():
+    """Returns the embedding model, loading it only on first call."""
+    global _embedder
+    if _embedder is None:
+        print("Loading local embedding model for the first time...")
+        from sentence_transformers import SentenceTransformer
+        _embedder = SentenceTransformer('all-MiniLM-L6-v2')
+        print("Embedding model loaded.")
+    return _embedder
 
 def get_embeddings(texts):
     """Fetches embeddings entirely locally."""
     print(f"Generating embeddings for {len(texts)} chunks...")
-    embeddings = embedder.encode(texts, convert_to_numpy=True)
+    embeddings = get_embedder().encode(texts, convert_to_numpy=True)
     return embeddings
 
 # ---------------- BUILD INDEX ----------------
@@ -72,7 +82,7 @@ def search(query, top_k=4):
 
     # Embed query locally
     try:
-        query_embedding = embedder.encode([query], convert_to_numpy=True).astype("float32")
+        query_embedding = get_embedder().encode([query], convert_to_numpy=True).astype("float32")
     except Exception as e:
         print(f"Query embedding error: {e}")
         return []
