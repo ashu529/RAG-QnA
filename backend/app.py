@@ -12,7 +12,10 @@ from vector_store import build_index
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
-CORS(app)  # Allow all origins for Netlify frontend
+
+# In production set FRONTEND_URL env var to your Vercel URL, e.g. https://my-rag.vercel.app
+FRONTEND_URL = os.getenv("FRONTEND_URL", "*")
+CORS(app, origins=FRONTEND_URL)
 
 # Absolute path to docs folder
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "data", "docs")
@@ -71,4 +74,5 @@ def ask():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
