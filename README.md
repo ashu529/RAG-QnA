@@ -148,8 +148,9 @@ npx firebase-tools deploy --only hosting
 
 > The Python backend requires a separate server (e.g., a VPS, Railway, or Render).
 
----
 
+---
+Live Link: https://rag-qna-1.onrender.com
 ## 📄 License
 
 MIT — Built with ❤️ for educational purposes.
